@@ -1,0 +1,125 @@
+// pranpriya-admin-desktop — a thin desktop shell around the existing
+// web admin panel (pranpriya-admin-ui.ausmart304.workers.dev).
+//
+// This does NOT reimplement the admin — it just opens the same live
+// site inside its own window, so staff can launch "ปราณปรียา แอดมิน"
+// from the Start menu / desktop instead of opening a browser and
+// typing the URL. Any future updates to the web admin show up here
+// automatically, since it's the same site.
+
+const { app, BrowserWindow, Menu, shell } = require("electron");
+const path = require("path");
+
+const ADMIN_URL = "https://pranpriya-admin-ui.ausmart304.workers.dev/";
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1320,
+    height: 880,
+    minWidth: 900,
+    minHeight: 600,
+    title: "ปราณปรียา แอดมิน",
+    backgroundColor: "#f4f1e8",
+    icon: path.join(__dirname, "build", "icon.ico"),
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  win.loadURL(ADMIN_URL);
+
+  // Links that try to open a new window (target="_blank") go to the
+  // user's normal browser instead of spawning another Electron window.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  const menu = Menu.buildFromTemplate([
+    {
+      label: "เมนู",
+      submenu: [
+        { label: "รีเฟรชหน้า", accelerator: "CmdOrCtrl+R", click: () => win.reload() },
+        {
+          label: "ย้อนกลับ",
+          accelerator: "Alt+Left",
+          click: () => {
+            if (win.webContents.canGoBack()) win.webContents.goBack();
+          },
+        },
+        { type: "separator" },
+        {
+          label: "เต็มจอ",
+          accelerator: "F11",
+          click: () => win.setFullScreen(!win.isFullScreen()),
+        },
+        {
+          label: "เครื่องมือนักพัฒนา",
+          accelerator: "F12",
+          click: () => win.webContents.toggleDevTools(),
+        },
+        { type: "separator" },
+        { label: "ออกจากโปรแกรม", role: "quit" },
+      ],
+    },
+  ]);
+  Menu.setApplicationMenu(menu);
+
+  return win;
+}
+
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
+
+{
+  "name": "pranpriya-admin-desktop",
+  "version": "1.0.0",
+  "description": "โปรแกรมเดสก์ท็อปสำหรับเปิดเว็บแอดมินปราณปรียากรุ๊ป (ครอบเว็บแอดมินเดิมไว้ในหน้าต่างโปรแกรม)",
+  "main": "main.js",
+  "author": "Pranpriya Group",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "th.pranpriya.admindesktop",
+    "productName": "ปราณปรียา แอดมิน",
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ปราณปรียา แอดมิน"
+    },
+    "directories": {
+      "output": "dist-installer"
+    }
+  }
+}
